@@ -8,12 +8,17 @@
 
 import Cocoa
 
+let UPDATE_TIME = 1.0
+
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
     let statusItem:NSStatusItem
     let statusItemView:StatusItemView
     let menu:NSMenu
     let autoLaunchMenu:NSMenuItem
+    
+    var totalData: Float = 0.0
+    internal let totlaItem: NSMenuItem
     
     override init() {
         statusItem = NSStatusBar.systemStatusBar().statusItemWithLength(72)
@@ -25,6 +30,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         autoLaunchMenu.action = #selector(menuItemAutoLaunchClick)
         menu.addItem(autoLaunchMenu)
         menu.addItem(NSMenuItem.separatorItem())
+        totlaItem = NSMenuItem(title: "\(totalData)", action: nil, keyEquivalent: "")
+        menu.addItem(totlaItem)
+        menu.addItem(NSMenuItem.separatorItem())
         menu.addItemWithTitle("About", action: #selector(menuItemAboutClick), keyEquivalent: "")
         menu.addItemWithTitle("Quit", action: #selector(menuItemQuitClick), keyEquivalent: "q")
         
@@ -33,7 +41,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidFinishLaunching(aNotification: NSNotification) {
-        NSTimer.scheduledTimerWithTimeInterval(2, target: self, selector: #selector(updateRateData), userInfo: nil, repeats: true)
+        NSTimer.scheduledTimerWithTimeInterval(UPDATE_TIME, target: self, selector: #selector(updateRateData), userInfo: nil, repeats: true)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(self.updateTotalData), name: "updateTotalDataMenu", object: nil);
     }
     
     func updateRateData() {
@@ -98,6 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 downRate += Float.init((string as NSString).substringWithRange(result.rangeAtIndex(2)))!
                 upRate += Float.init((string as NSString).substringWithRange(result.rangeAtIndex(4)))!
             }
+            totalData += upRate + downRate
             statusItemView.setRateData(up: upRate, down: downRate)
             //test data
             //statusItemView.setRateData(up: Float(arc4random())%StatusItemView.KB, down: Float(arc4random())%StatusItemView.MB)
@@ -133,5 +143,51 @@ extension AppDelegate {
     func menuItemAutoLaunchClick() {
         AutoLaunchHelper.toggleLaunchWhenLogin()
         autoLaunchMenu.state = AutoLaunchHelper.isLaunchWhenLogin() ? 1 : 0
+    }
+}
+
+extension AppDelegate {
+    
+    func formatRateData(data:Float) -> String {
+        var result:Float
+        var unit: String
+        
+        if data < StatusItemView.KB/100 {
+            result = 0
+            return "0 KB"
+        }
+            
+        else if data < StatusItemView.MB{
+            result = data/StatusItemView.KB
+            unit = " KB"
+        }
+            
+        else if data < StatusItemView.GB {
+            result = data/StatusItemView.MB
+            unit = " MB"
+        }
+            
+        else if data < StatusItemView.TB {
+            result = data/StatusItemView.GB
+            unit = " GB"
+        }
+            
+        else {
+            result = 1023
+            unit = " GB"
+        }
+        
+        if result < 100 {
+            return String.init(format: "%0.2f", result) + unit
+        }
+        else if result < 999 {
+            return String.init(format: "%0.1f", result) + unit
+        }
+        else {
+            return String.init(format: "%0.0f", result) + unit
+        }
+    }
+    func updateTotalData() {
+        totlaItem.title = "total      \(formatRateData(totalData))"
     }
 }

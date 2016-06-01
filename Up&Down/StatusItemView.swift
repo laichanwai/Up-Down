@@ -109,6 +109,7 @@ public class StatusItemView: NSControl {
 //action
 extension StatusItemView: NSMenuDelegate{
     public override func mouseDown(theEvent: NSEvent) {
+        NSNotificationCenter.defaultCenter().postNotificationName("updateTotalDataMenu", object: nil)
         statusItem.popUpStatusItemMenu(menu!)
     }
     
